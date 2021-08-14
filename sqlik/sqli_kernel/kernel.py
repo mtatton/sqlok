@@ -3,10 +3,10 @@
 #
 # CHANGELOG:
 #
-# 20210813 | Michael Tatton | Initial version
+# 20210812 | Michael Tatton | Initial version
 #
 # TODO:
-# 
+#
 # think about class for database access
 # read only mode
 # better db funcs debugging
@@ -21,7 +21,7 @@ import sqlite3
 from tabulate import tabulate
 from ipykernel.kernelbase import Kernel
 
-__version__ = "0.0.1a"
+__version__ = "0.0.2"
 
 DEBUG = 0
 
