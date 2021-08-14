@@ -13,10 +13,10 @@ setup(
         "tabulate",
     ],
     scripts={"sqli_kernel/sqlik_install"},
-    classifiers=(
+    classifiers=[
         "Development Status :: 1 - Planning",
         "Intended Audience :: Science/Research",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3.8",
-    ),
+    ],
 )
