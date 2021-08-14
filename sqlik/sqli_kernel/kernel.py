@@ -21,7 +21,7 @@ import sqlite3
 from tabulate import tabulate
 from ipykernel.kernelbase import Kernel
 
-__version__ = "0.0.2"
+__version__ = "0.0.1"
 
 DEBUG = 0
 
@@ -118,16 +118,6 @@ class SQLiKernel(Kernel):
                 "payload": [],
                 "user_expressions": {},
             }
-            # else:
-            #    error_content = {
-            #        'ename': '',
-            #        'evalue': str(res),
-            #        'traceback': []
-            #    }
-            #    self.send_response(self.iopub_socket, 'error', error_content)
-            #    error_content['execution_count'] = self.execution_count
-            #    error_content['status'] = 'error'
-            #    return(error_content)
 
     def _filter_magics(self, code):
 
