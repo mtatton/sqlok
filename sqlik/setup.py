@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="sqli_kernel",
-    version="0.0.2",
+    version="0.0.1",
     description="SQLite Kernel for Jupyter Notebook",
     url="https://github.com/mtatton/sqlok",
     author="Michael Tatton",
