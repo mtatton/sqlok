@@ -1,9 +1,9 @@
-Jupyter SQL Kernel for SQLite
+Jupyter SQL Kernel for MySQL
 
 install:
 
-pip install sqli-kernel
-sqlik_install
+pip install sqlm-kernel
+sqlmk_install
 
 optionally install terminal jupyter notebooks:
 pip install nbtermix
