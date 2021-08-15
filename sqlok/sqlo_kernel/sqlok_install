@@ -8,9 +8,9 @@ from jupyter_client.kernelspec import KernelSpecManager
 from IPython.utils.tempdir import TemporaryDirectory
 
 kernel_json = {
-    "argv": [sys.executable, "-m", "sqli_kernel", "-f", "{connection_file}"],
-    "display_name": "sqlik",
-    "language": "sqlik",
+    "argv": [sys.executable, "-m", "sqlo_kernel", "-f", "{connection_file}"],
+    "display_name": "sqlok",
+    "language": "sql",
 }
 
 
@@ -22,7 +22,7 @@ def install_my_kernel_spec(user=True, prefix=None):
         # TODO: Copy resources once they're specified
 
         print("Installing IPython kernel spec")
-        KernelSpecManager().install_kernel_spec(td, "sqlik", user=user, prefix=prefix)
+        KernelSpecManager().install_kernel_spec(td, "sqlok", user=user, prefix=prefix)
 
 
 def _is_root():

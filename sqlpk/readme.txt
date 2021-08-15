@@ -1,9 +1,9 @@
-Jupyter SQL Kernel for SQLite
+Jupyter SQL Kernel for PostgreSQL
 
 install:
 
-pip install sqli-kernel
-sqlik_install
+pip install sqlp-kernel
+sqlpk_install
 
 optionally install terminal jupyter notebooks:
 pip install nbtermix
