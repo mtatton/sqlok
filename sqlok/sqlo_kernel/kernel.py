@@ -12,15 +12,12 @@
 #
 #
 
-import re
 import os
-
 import json
 import cx_Oracle
-
 from tabulate import tabulate
-
 from ipykernel.kernelbase import Kernel
+from ipykernel.kernelapp import IPKernelApp
 
 __version__ = "0.0.5"
 
@@ -40,7 +37,6 @@ def create_dns(cdf):
 def qry2df(qry, constr=None):
     try:
         df = []
-        row = []
         hdr = []
 
         log(str(type(constr)))
@@ -185,8 +181,5 @@ class SQLoKernel(Kernel):
         os.remove(self.master_path)
         log("SHUTDOWN")
 
-
-from ipykernel.kernelapp import IPKernelApp
-from sqlo_kernel.kernel import SQLoKernel
 
 IPKernelApp.launch_instance(kernel_class=SQLoKernel)

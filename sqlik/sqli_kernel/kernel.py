@@ -15,13 +15,13 @@
 # autocomplete
 #
 
-import re
+__version__ = "0.0.2"
+
 import os
 import sqlite3
 from tabulate import tabulate
 from ipykernel.kernelbase import Kernel
-
-__version__ = "0.0.2"
+from ipykernel.kernelapp import IPKernelApp
 
 DEBUG = 0
 
@@ -39,7 +39,6 @@ con = None
 def qry2df(qry, dbfile="tmp.db"):
     try:
         df = []
-        row = []
         hdr = []
 
         con = sqlite3.connect(dbfile)
@@ -151,8 +150,5 @@ class SQLiKernel(Kernel):
         os.remove(self.master_path)
         log("SHUTDOWN")
 
-
-from ipykernel.kernelapp import IPKernelApp
-from sqli_kernel.kernel import SQLiKernel
 
 IPKernelApp.launch_instance(kernel_class=SQLiKernel)

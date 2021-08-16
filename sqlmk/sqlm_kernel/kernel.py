@@ -12,15 +12,12 @@
 #
 #
 
-import re
 import os
-
 import json
 import mysql.connector
-
 from tabulate import tabulate
-
 from ipykernel.kernelbase import Kernel
+from ipykernel.kernelapp import IPKernelApp
 
 __version__ = "0.0.4"
 
@@ -32,7 +29,6 @@ con = None
 def qry2df(qry, constr=None):
     try:
         df = []
-        row = []
         hdr = []
 
         log(str(type(constr)))
@@ -172,8 +168,5 @@ class SQLmKernel(Kernel):
         os.remove(self.master_path)
         log("SHUTDOWN")
 
-
-from ipykernel.kernelapp import IPKernelApp
-from sqlm_kernel.kernel import SQLmKernel
 
 IPKernelApp.launch_instance(kernel_class=SQLmKernel)

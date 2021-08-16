@@ -12,14 +12,11 @@
 #
 #
 
-import re
 import os
-
 import json
 import psycopg2
-
 from tabulate import tabulate
-
+from ipykernel.kernelapp import IPKernelApp
 from ipykernel.kernelbase import Kernel
 
 __version__ = "0.0.4"
@@ -33,7 +30,6 @@ con = None
 def qry2df(qry, constr=None):
     try:
         df = []
-        row = []
         hdr = []
 
         log(str(type(constr)))
@@ -174,8 +170,5 @@ class SQLpKernel(Kernel):
         os.remove(self.master_path)
         log("SHUTDOWN")
 
-
-from ipykernel.kernelapp import IPKernelApp
-from sqlp_kernel.kernel import SQLpKernel
 
 IPKernelApp.launch_instance(kernel_class=SQLpKernel)
