@@ -12,14 +12,14 @@
 #
 #
 
+__version__ = "0.0.6"
+
 import os
 import json
 import psycopg2
 from tabulate import tabulate
 from ipykernel.kernelapp import IPKernelApp
 from ipykernel.kernelbase import Kernel
-
-__version__ = "0.0.4"
 
 DEBUG = 0
 

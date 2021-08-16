@@ -9,8 +9,8 @@ from IPython.utils.tempdir import TemporaryDirectory
 
 kernel_json = {
     "argv": [sys.executable, "-m", "sqli_kernel", "-f", "{connection_file}"],
-    "display_name": "sqlik",
-    "language": "sqlik",
+    "display_name": "SQLite Kernel",
+    "language": "sql",
 }
 
 

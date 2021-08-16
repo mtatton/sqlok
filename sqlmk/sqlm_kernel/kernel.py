@@ -12,14 +12,14 @@
 #
 #
 
+__version__ = "0.0.6"
+
 import os
 import json
 import mysql.connector
 from tabulate import tabulate
 from ipykernel.kernelbase import Kernel
 from ipykernel.kernelapp import IPKernelApp
-
-__version__ = "0.0.4"
 
 DEBUG = 0
 

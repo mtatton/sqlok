@@ -12,14 +12,14 @@
 #
 #
 
+__version__ = "0.0.6"
+
 import os
 import json
 import cx_Oracle
 from tabulate import tabulate
 from ipykernel.kernelbase import Kernel
 from ipykernel.kernelapp import IPKernelApp
-
-__version__ = "0.0.5"
 
 DEBUG = 0
 

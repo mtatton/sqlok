@@ -9,7 +9,7 @@ from IPython.utils.tempdir import TemporaryDirectory
 
 kernel_json = {
     "argv": [sys.executable, "-m", "sqlp_kernel", "-f", "{connection_file}"],
-    "display_name": "sqlpk",
+    "display_name": "PostgreSQL Kernel",
     "language": "sql",
 }
 

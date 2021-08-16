@@ -9,7 +9,7 @@ from IPython.utils.tempdir import TemporaryDirectory
 
 kernel_json = {
     "argv": [sys.executable, "-m", "sqlm_kernel", "-f", "{connection_file}"],
-    "display_name": "sqlmk",
+    "display_name": "MySQL Kernel",
     "language": "sql",
 }
 
