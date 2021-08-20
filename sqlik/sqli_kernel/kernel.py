@@ -3,72 +3,125 @@
 #
 # CHANGELOG:
 #
-# 20210812 | Michael Tatton | Initial version
+# 20210815 | Michael Tatton | Initial version
+# 20210822 | Michael Tatton | v0.0.8
 #
-# TODO:
-#
-# think about class for database access
-# read only mode
-# better db funcs debugging
-# dump to csv, load from csv
-# show where the error is in the code editor
-# autocomplete
-#
-
-__version__ = "0.0.6"
 
 import os
-import sqlite3
+import json
 from tabulate import tabulate
+import traceback
 from ipykernel.kernelbase import Kernel
 from ipykernel.kernelapp import IPKernelApp
+import sqlite3
+
+# import signal
+
+str_kernel = "sqlik"
+__version__ = "0.0.8"
 
 DEBUG = 0
 
 
 def log(str):
     if DEBUG == 1:
-        f = open("/tmp/sqlk.log", "a")
-        f.write(str + "\n")
+        f = open("/tmp/sqlok.log", "a")
+        f.write(str_kernel + " " + str + "\n")
         f.close()
 
 
-con = None
+class DBConnection:
+
+    con = None
+    connected = False
+    dbcon = None
+    dns = None
+
+    def __init__(self, constr):
+        self.connected = True
+        try:
+            if os.path.exists(str_kernel + "_conn.json"):
+                f = open(str_kernel + "_conn.json", "r")
+                dbcontmp = f.read()
+                f.close()
+                self.dbcon = json.loads(dbcontmp)
+            self.constr = self.dbcon
+            self.con = sqlite3.connect(constr["dbfile"])
+            log("-- CONNECTED TO: " + str(json.dumps(self.dbcon)))
+            self.connected = True
+        except Exception as e:
+            self.connected = False
+            log("-- INIT CONNECTION ERROR : " + str(e))
+            log(traceback.format_exc())
+
+    def connect(self, constr):
+        try:
+            self.con = sqlite3.connect(constr["dbfile"])
+            log("-- CONNEcTED TO DATABASE")
+            self.connected = True
+            return "CONNECTED"
+        except Exception as e:
+            self.connected = False
+            log("-- CONNECT PROBLEM: " + str(e))
+            log(traceback.format_exc())
+            return str(e)
+
+    def qry2df(self, qry):
+        try:
+            df = []
+            hdr = []
+            rows = None
+            retres = "OK"
+            if self.connected:
+                cur = self.con.cursor()
+                try:
+                    cur.execute(qry)
+                except Exception as e:
+                    self.con.rollback()
+                    log("-- QUERY EXECUTION ERROR: " + str(e))
+                try:
+                    rows = cur.fetchall()
+                except Exception as e:
+                    log("-- NO FETCH : " + str(e))
+                self.con.commit()
+                if rows:
+                    for cn in cur.description:
+                        hdr.append(cn[0])
+                # con.close()
+                if rows:
+                    df.append(hdr)
+                    for r in rows:
+                        df.append(list(r))
+                else:
+                    df = [("OK")]
+            else:
+                df = [("NOT CONNECTED")]
+                retres = "ERROR"
+            return (retres, df)
+        except Exception as e:
+            retval = "ERROR"
+            rows = [(str(e))]
+            log("QUERY ERROR: " + str(e))
+            log(traceback.format_exc())
+            return (retval, rows)
+
+    def disconnect(self):
+        self.connected = False
+        self.con.close()
+        log("-- DISCONNECTED")
+
+    def __del__(self):
+        self.disconnect()
 
 
-def qry2df(qry, dbfile="tmp.db"):
-    try:
-        df = []
-        hdr = []
+class SQLoKernel(Kernel):
 
-        con = sqlite3.connect(dbfile)
-        con.row_factory = sqlite3.Row
-        cur = con.cursor()
-        cur.execute(qry)
-        rows = cur.fetchall()
-        if rows:
-            for cn in cur.description:
-                hdr.append(cn[0])
-        con.commit()
-        con.close()
-        if rows:
-            df.append(hdr)
-            for r in rows:
-                df.append(list(r))
-        else:
-            df = [("OK")]
-        return ("OK", df)
-    except Exception as e:
-        retval = "ERROR"
-        rows = [(str(e))]
-        return (retval, rows)
-
-
-class SQLiKernel(Kernel):
-
-    implementation = "sql_kernel"
+    implementation = str_kernel
     implementation_version = __version__
-    dbfile = "tmp.db"
+    dbcon = None
+
+    con = None
+    constr = {"dbfile": "test.db"}
 
     @property
     def language_version(self):
@@ -79,37 +132,29 @@ class SQLiKernel(Kernel):
         return ""
 
     language_info = {
-        "name": "sqlik",
+        "name": str_kernel,
         "mimetype": "text/plain",
         "file_extension": ".sql",
     }
 
+    # def handler(signum, frame):
+    #    log("- - - - - - - - - - - - - SIGINT || SIGTERM")
+
     def __init__(self, **kwargs):
-        Kernel.__init__(self, **kwargs)
-        log("__init__")
+        try:
+            Kernel.__init__(self, **kwargs)
+            self.dbcon = self.constr
+            self.con = DBConnection(self.dbcon)
+            log("__init__")
+        except Exception as e:
+            log("-- KERNEL INIT PROBLEM: " + str(e))
+            log(traceback.format_exc())
+        # signal.signal(signal.SIGINT, self.handler)
+        # signal.signal(signal.SIGTERM, self.handler)
 
-    def do_execute(
-        self, code, silent, store_history=True, user_expressions=None, allow_stdin=False
-    ):
-        if code[-1] == ";":
-            code = code[:-1]
-        if not silent:
-            magics = self._filter_magics(code)
-            if magics:
-                if magics["dbfile"]:
-                    log(str(magics))
-                    self.dbfile = str(magics["dbfile"][0])
-            # log(self.dbfile)
-            status, res = qry2df(code, self.dbfile)
-            log(status)
-            log(str(res))
-
-            # if status == "OK":
-            if len(res) > 1:
-                ret = tabulate(res, headers="firstrow")
-            else:
-                ret = str(res[0])
-            message = {"name": "stdout", "text": ret + "\n"}
+    def send_message(self, msg):
+        try:
+            message = {"name": "stdout", "text": msg + "\n"}
             self.send_response(self.iopub_socket, "stream", message)
             return {
                 "status": "ok",
@@ -117,38 +162,98 @@ class SQLiKernel(Kernel):
                 "payload": [],
                 "user_expressions": {},
             }
-            # else:
-            #    error_content = {
-            #        'ename': '',
-            #        'evalue': str(res),
-            #        'traceback': []
-            #    }
-            #    self.send_response(self.iopub_socket, 'error', error_content)
-            #    error_content['execution_count'] = self.execution_count
-            #    error_content['status'] = 'error'
-            #    return(error_content)
+        except Exception as e:
+            log("-- SEND MESAGE ERROR: " + str(e))
+            log(traceback.format_exc())
+
+    def do_execute(
+        self, code, silent, store_history=True, user_expressions=None, allow_stdin=False
+    ):
+        try:
+            if len(code) > 0 and code[-1] == ";":
+                code = code[:-1]
+            log("-- EXECUTE CONNECTED: " + str(self.con.connected))
+            magics = self._filter_magics(code)
+            status = None
+            res = None
+            ret = None
+            if self.con.connected is True:  # and not silent:
+                if magics:
+                    if magics["dbcon"]:
+                        self.dbcon = str(magics["dbcon"])
+                        self.constr = self.dbcon
+                        log(str(self.dbcon))
+                    else:
+                        # status, res = self.con.qry2df(code, self.constr)
+                        status, res = self.con.qry2df(code)
+                log("-- EXECUTE STATUS: " + str(status))
+                log("-- EXECUTE RES: " + str(res))
+
+                if res:
+                    if len(res) > 1 and status:
+                        ret = tabulate(res, headers="firstrow")
+                    else:
+                        ret = str(res[0])
+            else:
+                ret = "NOT CONNECTED"
+            if ret:
+                self.send_message(ret)
+        except Exception as e:
+            log("-- ERROR IN DO_EXECUTE: " + str(e))
+            log(traceback.format_exc())
 
     def _filter_magics(self, code):
 
-        magics = {"dbfile": []}
+        try:
+            magics = {"dbcon": []}
 
-        for line in code.splitlines():
-            if line.startswith("--%"):
-                key, value = line[3:].split(":", 2)
-                key = key.strip().lower()
-
-                if key in ["dbfile"]:
-                    for flag in value.split():
-                        magics[key] += [flag]
-
+            for line in code.splitlines():
+                if line.startswith("--%"):
+                    dbconln = line[4:]
+                    log(dbconln[0:6])
+                    if dbconln[0:6] == "dbcon:":
+                        magics["dbcon"] = dbconln[6:]
+                        self.dbcon = json.loads(magics["dbcon"])
+                        self.constr = self.dbcon
+                        conret = self.con.connect(self.constr)
+                        log("-- MAGICS DBCON CONNECTED: " + str(self.con.connected))
+                        self.send_message(conret)
+                    elif dbconln[0:5] == "csave":
+                        f = open(str_kernel + "_conn.json", "w")
+                        f.write(str(self.dbcon).replace("'", '"'))
+                        f.close()
+                        magics["dbcon"] = self.dbcon
+                        conret = "CONNECTION INFO SAVED"
+                        self.send_message(conret)
+                        log("-- MAGICS CONNECTION INFO SAVED")
+                    elif dbconln[0:5] == "cload":
+                        if os.path.exists(str_kernel + "_conn.json"):
+                            f = open(str_kernel + "_conn.json", "r")
+                            dbcontmp = f.read()
+                            f.close()
+                            log(dbcontmp)
+                            self.dbcon = json.loads(dbcontmp)
+                            self.constr = self.dbcon
+                            magics["dbcon"] = self.dbcon
+                            conret = self.con.connect(self.constr)
+                            log("-- MAGICS DBCON CONNECTED: " + str(self.con.connected))
+                            self.send_message(conret)
+                            log(
+                                "-- CONNECTION INFO LOADED "
+                                + str(json.dumps(self.dbcon))
+                            )
+                    log(str(magics["dbcon"]))
+        except Exception as e:
+            log("-- ERROR IN MAGICS: " + str(e))
+            log(traceback.format_exc())
         return magics
 
     def do_shutdown(self, restart):
-        """Remove all the temporary files created by the kernel"""
+        self.con.disconnect()
+        log("-- KERNEL SHUTDOWN DO SHUTDOWN")
         for file in self.files:
             os.remove(file)
         os.remove(self.master_path)
-        log("SHUTDOWN")
 
 
-IPKernelApp.launch_instance(kernel_class=SQLiKernel)
+IPKernelApp.launch_instance(kernel_class=SQLoKernel)

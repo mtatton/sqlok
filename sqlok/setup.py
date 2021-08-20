@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="sqlo_kernel",
-    version="0.0.5",
+    version="0.0.8",
     description="Oracle Kernel for Jupyter Notebook",
     url="https://github.com/mtatton/sqlok",
     author="Michael Tatton",
