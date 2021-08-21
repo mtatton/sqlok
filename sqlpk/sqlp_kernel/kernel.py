@@ -4,11 +4,14 @@
 # CHANGELOG:
 #
 # 20210815 | Michael Tatton | Initial version
-# 20210822 | Michael Tatton | v0.0.8
+# 20210820 | Michael Tatton | v0.0.8
+# 20210821 | Michael Tatton | v0.0.9
+# 20210822 | Michael Tatton | v0.1.0
 #
 
 import os
 import json
+import csv
 from tabulate import tabulate
 import traceback
 from ipykernel.kernelbase import Kernel
@@ -18,7 +21,7 @@ import psycopg2
 # import signal
 
 str_kernel = "sqlpk"
-__version__ = "0.0.8"
+__version__ = "0.1.0"
 
 DEBUG = 0
 
@@ -36,6 +39,8 @@ class DBConnection:
     connected = False
     dbcon = None
     dns = None
+    cols = None
+    rows = None
 
     def __init__(self, constr):
         self.connected = True
@@ -56,8 +61,9 @@ class DBConnection:
 
     def connect(self, constr):
         try:
+            self.constr = constr
             self.con = psycopg2.connect(**self.constr)
-            log("-- CONNEcTED TO DATABASE")
+            log("-- CONNECTED TO DATABASE")
             self.connected = True
             return "CONNECTED"
         except Exception as e:
@@ -72,28 +78,45 @@ class DBConnection:
             hdr = []
             rows = None
             retres = "OK"
+            error_ind = False
+            data_ind = False
+            rows = None
             if self.connected:
+                # CREATE CURSOR
                 cur = self.con.cursor()
                 try:
                     cur.execute(qry)
                 except Exception as e:
                     self.con.rollback()
+                    rows = [[str(e)]]
                     log("-- QUERY EXECUTION ERROR: " + str(e))
+                    error_ind = True
+                # TRY TO FETCH DATA
                 try:
-                    rows = cur.fetchall()
+                    if not error_ind:
+                        rows = cur.fetchall()
+                        data_ind = True
                 except Exception as e:
                     log("-- NO FETCH : " + str(e))
-                self.con.commit()
-                if rows:
+                # COMMIT WHEN NO ERROR IS PRESENT
+                if error_ind is False and data_ind is False:
+                    self.con.commit()
+                    rows = [["OK"]]
+                # IF DATA AND NO ERROR GET HEADER
+                if data_ind is True and cur.description:
+                    # log(str(rows))
                     for cn in cur.description:
                         hdr.append(cn[0])
+                    df.append(hdr)
                 # con.close()
                 if rows:
-                    df.append(hdr)
-                    for r in rows:
-                        df.append(list(r))
+                    if rows:
+                        for r in rows:
+                            df.append(list(r))
+                        self.rows = rows
+                        self.cols = hdr
                 else:
-                    df = [("OK")]
+                    df = [["OK"]]
             else:
                 df = [("NOT CONNECTED")]
                 retres = "ERROR"
@@ -172,6 +195,22 @@ class SQLpKernel(Kernel):
             log("-- SEND MESAGE ERROR: " + str(e))
             log(traceback.format_exc())
 
+    def save_data_to_csv(self, file_name):
+        msg = None
+        if self.con.cols and self.con.rows:
+            try:
+                with open(file_name + ".csv", "w") as out:
+                    csv_out = csv.writer(out)
+                    csv_out.writerow(self.con.cols)
+                    for row in self.con.rows:
+                        csv_out.writerow(row)
+                    msg = "Written " + file_name + ".csv"
+            except Exception as e:
+                msg = "Error during csv export " + str(e)
+        else:
+            msg = "No data to save"
+        self.send_message(msg)
+
     def do_execute(
         self, code, silent, store_history=True, user_expressions=None, allow_stdin=False
     ):
@@ -183,12 +222,14 @@ class SQLpKernel(Kernel):
             status = None
             res = None
             ret = None
-            if self.con.connected is True:  # and not silent:
+            if magics["noexec"]:
+                return
+            if self.con.connected is True and not silent:
                 if magics:
                     if magics["dbcon"]:
                         self.dbcon = str(magics["dbcon"])
                         self.constr = self.dbcon
-                        log(str(self.dbcon))
+                        # log(str(self.dbcon))
                     else:
                         # status, res = self.con.qry2df(code, self.constr)
                         status, res = self.con.qry2df(code)
@@ -196,10 +237,10 @@ class SQLpKernel(Kernel):
                 log("-- EXECUTE RES: " + str(res))
 
                 if res:
-                    if len(res) > 1 and status:
+                    if len(res) > 1:
                         ret = tabulate(res, headers="firstrow")
                     else:
-                        ret = str(res[0])
+                        ret = str(res[0][0])
             else:
                 ret = "NOT CONNECTED"
             if ret:
@@ -211,19 +252,28 @@ class SQLpKernel(Kernel):
     def _filter_magics(self, code):
 
         try:
-            magics = {"dbcon": []}
+            magics = {"dbcon": [], "noexec": False}
 
             for line in code.splitlines():
                 if line.startswith("--%"):
                     dbconln = line[4:]
-                    log(dbconln[0:6])
-                    if dbconln[0:6] == "dbcon:":
-                        magics["dbcon"] = dbconln[6:]
-                        self.dbcon = json.loads(magics["dbcon"])
-                        self.constr = self.dbcon
-                        conret = self.con.connect(self.constr)
-                        log("-- MAGICS DBCON CONNECTED: " + str(self.con.connected))
-                        self.send_message(conret)
+                    # log("-- dbconln magics: " + dbconln[0:5])
+                    if dbconln[0:5] == "dbcon":
+                        if len(dbconln) > 6:
+                            magics["dbcon"] = dbconln[6:]
+                            self.dbcon = json.loads(magics["dbcon"])
+                            self.constr = self.dbcon
+                            log("-- TYRING TO CONNECT WITH: " + str(self.constr))
+                            conret = self.con.connect(self.constr)
+                            log("-- MAGICS DBCON CONNECTED: " + str(self.con.connected))
+                            self.send_message(conret)
+                    elif dbconln[0:5] == "dsave":
+                        fname = "tmp"
+                        if len(dbconln) > 6:
+                            fname = dbconln[6:]
+                        log("-- SAVING DATA TO FILE")
+                        self.save_data_to_csv(fname)
+                        magics["noexec"] = True
                     elif dbconln[0:5] == "csave":
                         f = open(str_kernel + "_conn.json", "w")
                         f.write(str(self.dbcon).replace("'", '"'))
