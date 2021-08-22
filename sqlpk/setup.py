@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="sqlp_kernel",
-    version="0.1.0",
+    version="0.1.1",
     description="PostgreSQL Kernel for Jupyter Notebook",
     url="https://github.com/mtatton/sqlok",
     author="Michael Tatton",

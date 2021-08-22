@@ -6,7 +6,8 @@
 # 20210815 | Michael Tatton | Initial version
 # 20210820 | Michael Tatton | v0.0.8
 # 20210821 | Michael Tatton | v0.0.9
-# 20210822 | Michael Tatton | v0.1.0
+# 20210821 | Michael Tatton | v0.1.0
+# 20210822 | Michael Tatton | v0.1.1
 #
 
 import os
@@ -21,7 +22,7 @@ import cx_Oracle
 # import signal
 
 str_kernel = "sqlok"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 DEBUG = 0
 
@@ -71,6 +72,8 @@ class DBConnection:
 
     def connect(self, constr):
         try:
+            if self.connected is True:
+                self.disconnect()
             self.constr = constr
             self.dsn = self.create_dns(self.constr)
             self.con = cx_Oracle.connect(
@@ -113,8 +116,10 @@ class DBConnection:
                 except Exception as e:
                     log("-- NO FETCH : " + str(e))
                 # COMMIT WHEN NO ERROR IS PRESENT
-                if error_ind is False and data_ind is False:
+                # log("-- COMMIT YN: " + str(error_ind) + " " + str(data_ind))
+                if error_ind is False:
                     self.con.commit()
+                if error_ind is False and data_ind is False:
                     rows = [["OK"]]
                 # IF DATA AND NO ERROR GET HEADER
                 if data_ind is True and cur.description:
@@ -143,9 +148,10 @@ class DBConnection:
             return (retval, rows)
 
     def disconnect(self):
-        self.connected = False
+        self.con.commit()
         self.con.close()
         log("-- DISCONNECTED")
+        self.connected = False
 
     def __del__(self):
         self.disconnect()
@@ -156,6 +162,8 @@ class SQLoKernel(Kernel):
     implementation = str_kernel
     implementation_version = __version__
     dbcon = None
+    # html_output = True
+    html_output = False
 
     con = None
     constr = {
@@ -189,11 +197,30 @@ class SQLoKernel(Kernel):
             self.dbcon = self.constr
             self.con = DBConnection(self.dbcon)
             log("__init__")
+            # self.html_output = True
+            self.html_output = False
         except Exception as e:
             log("-- KERNEL INIT PROBLEM: " + str(e))
             log(traceback.format_exc())
         # signal.signal(signal.SIGINT, self.handler)
         # signal.signal(signal.SIGTERM, self.handler)
+
+    def send_message_html(self, html):
+        try:
+            message = {
+                "data": {"text/html": html},
+                "metadata": {},
+            }
+            self.send_response(self.iopub_socket, "display_data", message)
+            return {
+                "status": "ok",
+                "execution_count": self.execution_count,
+                "payload": [],
+                "user_expressions": {},
+            }
+        except Exception as e:
+            log("-- SEND HTML MESAGE ERROR: " + str(e))
+            log(traceback.format_exc())
 
     def send_message(self, msg):
         try:
@@ -208,6 +235,25 @@ class SQLoKernel(Kernel):
         except Exception as e:
             log("-- SEND MESAGE ERROR: " + str(e))
             log(traceback.format_exc())
+
+    def conv_data_to_html(self, res):
+        msg = ""
+        try:
+            if self.con.cols and self.con.rows:
+                msg = "<table>"
+                for row in res:
+                    msg += "<tr>"
+                    for cell in row:
+                        msg += "<td>" + str(cell) + "</td>"
+                    msg += "</tr>"
+                msg += "</table>"
+            else:
+                msg = "No data"
+        except Exception as e:
+            log("-- CONV DATA TO HTML ERROR: " + str(e))
+            log(traceback.format_exc())
+
+        return msg
 
     def save_data_to_csv(self, file_name):
         msg = None
@@ -252,13 +298,19 @@ class SQLoKernel(Kernel):
 
                 if res:
                     if len(res) > 1:
-                        ret = tabulate(res, headers="firstrow")
+                        if self.html_output is True:
+                            ret = self.conv_data_to_html(res)
+                        else:
+                            ret = tabulate(res, headers="firstrow")
                     else:
                         ret = str(res[0][0])
             else:
                 ret = "NOT CONNECTED"
             if ret:
-                self.send_message(ret)
+                if self.html_output is True:
+                    self.send_message_html(ret)
+                else:
+                    self.send_message(ret)
         except Exception as e:
             log("-- ERROR IN DO_EXECUTE: " + str(e))
             log(traceback.format_exc())
@@ -281,6 +333,14 @@ class SQLoKernel(Kernel):
                             conret = self.con.connect(self.constr)
                             log("-- MAGICS DBCON CONNECTED: " + str(self.con.connected))
                             self.send_message(conret)
+                    elif dbconln[0:5] == "otext":
+                        self.html_output = False
+                        self.send_message("Output mode set to text")
+                        magics["noexec"] = True
+                    elif dbconln[0:5] == "ohtml":
+                        self.html_output = True
+                        self.send_message("Output mode set to html")
+                        magics["noexec"] = True
                     elif dbconln[0:5] == "dsave":
                         fname = "tmp"
                         if len(dbconln) > 6:

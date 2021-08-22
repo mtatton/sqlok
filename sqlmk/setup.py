@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="sqlm_kernel",
-    version="0.1.0",
+    version="0.1.1",
     description="MySQL Kernel for Jupyter Notebook",
     url="https://github.com/mtatton/sqlok",
     author="Michael Tatton",
