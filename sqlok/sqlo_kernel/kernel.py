@@ -1,14 +1,6 @@
 #
 # (c) 2021 Michael Tatton
 #
-# CHANGELOG:
-#
-# 20210815 | Michael Tatton | Initial version
-# 20210820 | Michael Tatton | v0.0.8
-# 20210821 | Michael Tatton | v0.0.9
-# 20210821 | Michael Tatton | v0.1.0
-# 20210822 | Michael Tatton | v0.1.1
-#
 
 import os
 import json
@@ -22,7 +14,7 @@ import cx_Oracle
 # import signal
 
 str_kernel = "sqlok"
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 DEBUG = 0
 
@@ -182,6 +174,14 @@ class SQLoKernel(Kernel):
     def banner(self):
         return ""
 
+    # @property
+    # def files(self):
+    #    return ""
+
+    # @property
+    # def master_path(self):
+    #    return ""
+
     language_info = {
         "name": str_kernel,
         "mimetype": "text/plain",
@@ -211,6 +211,7 @@ class SQLoKernel(Kernel):
                 "data": {"text/html": html},
                 "metadata": {},
             }
+            # message = {"data": { "text/plain": html }, "metadata": {}, }
             self.send_response(self.iopub_socket, "display_data", message)
             return {
                 "status": "ok",
@@ -278,12 +279,16 @@ class SQLoKernel(Kernel):
             if len(code) > 0 and code[-1] == ";":
                 code = code[:-1]
             log("-- EXECUTE CONNECTED: " + str(self.con.connected))
+
             magics = self._filter_magics(code)
+
+            if magics["noexec"] is True:
+                log("-- NOEXEC")
+                return
+
             status = None
             res = None
             ret = None
-            if magics["noexec"]:
-                return
             if self.con.connected is True and not silent:
                 if magics:
                     if magics["dbcon"]:
@@ -336,10 +341,12 @@ class SQLoKernel(Kernel):
                     elif dbconln[0:5] == "otext":
                         self.html_output = False
                         self.send_message("Output mode set to text")
+                        log("-- OUTPUT MODE TEXT")
                         magics["noexec"] = True
                     elif dbconln[0:5] == "ohtml":
                         self.html_output = True
                         self.send_message("Output mode set to html")
+                        log("-- OUTPUT MODE HTML")
                         magics["noexec"] = True
                     elif dbconln[0:5] == "dsave":
                         fname = "tmp"
