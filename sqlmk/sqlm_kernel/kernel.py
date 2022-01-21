@@ -1,5 +1,5 @@
 #
-# (c) 2021 Michael Tatton
+# (c) 2021-2022 Michael Tatton
 #
 
 import os
@@ -14,7 +14,7 @@ import mysql.connector
 # import signal
 
 str_kernel = "sqlmk"
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 DEBUG = 0
 

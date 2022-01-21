@@ -1,15 +1,18 @@
-Oracle Kernel for Jupyter Notebook
+Postgres Kernel for Jupyter Notebook
 
 to install:
 
-pip install sqlo-kernel
-sqlok_install
+pip install sqlp-kernel
+sqlpk_install
 
 optionally install terminal jupyter notebooks:
 
 pip install nbtermix
 
 CHANGELOG:
+
+v0.1.3
++ added error message return
 
 v0.1.2
 + text/html fix (--% ohtml)

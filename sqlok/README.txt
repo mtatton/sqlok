@@ -1,15 +1,18 @@
-SQLite Kernel for Jupyter Notebook
+Oracle Kernel for Jupyter Notebook
 
 to install:
 
-pip install sqli-kernel
-sqlik_install
+pip install sqlo-kernel
+sqlok_install
 
 optionally install terminal jupyter notebooks:
 
 pip install nbtermix
 
 CHANGELOG:
+
+v0.1.3
++ added error message return
 
 v0.1.2
 + text/html fix (--% ohtml)
